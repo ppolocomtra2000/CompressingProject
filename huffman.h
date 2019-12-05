@@ -31,17 +31,26 @@ protected:
 		}
 	};
 	priority_queue<huffNode, vector<huffNode>, compare> pq;
+	//init Table Code
 	void createNodeArray();
 	void traverse(huffNode, string);
+	//convert between Binary and Decimal
 	int binaryToDecimal(string&);
 	string decimalToBinary(int);
+	//init tree
 	inline void buildTree(string&, char);
 public:
+	//constructor
 	huffman(string, string);
+	//init priority queue
 	void createPq();
+	//init Huffman tree
 	void createHuffmanTree();
+	//Codes table
 	void calculateHufmanCodes();
+	//encoding
 	void codingSave();
+	//decoding
 	void decodingSave();
 	void recreateHuffmanTree();
 };

@@ -28,6 +28,7 @@ void execute()
 		h.codingSave();
 		clock_t finish = clock();
 		double duration = (double)finish - start;
+		cout<<"====================="<<endl;
 		cout << "Compressing successfully !!"  << endl;
 		cout << "Time duration: " << (double)duration / 1000 << " s" << endl;
 		cout << "File name after compress: " << outFile << endl;
@@ -47,6 +48,7 @@ void execute()
 		h.decodingSave();
 		clock_t finish = clock();
 		double duration = (double)finish - start;
+		cout<<"====================="<<endl;
 		cout << "Decompressing successfully !!" << endl;
 		cout << "Time duration: " << (double)duration / 1000 << " s" << endl;
 		cout << "File name after decompress: " << outFile << endl;

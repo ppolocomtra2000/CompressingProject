@@ -2,6 +2,7 @@
 
 void huffman::createNodeArray()
 {
+	//128 stands for 128 basic ASCII 
 	for (int i = 0; i < 128; i++)
 	{
 		nodeArray[i] = new huffman_node;
@@ -9,7 +10,7 @@ void huffman::createNodeArray()
 		nodeArray[i]->freq = 0;
 	}
 }
-
+//using recursive to get each character's code
 void huffman::traverse(huffNode node, string code)
 {
 	if (node->left == NULL && node->right == NULL)
@@ -64,7 +65,7 @@ inline void huffman::buildTree(string& path, char aCode)
 	}
 	current->id = aCode;
 }
-
+//init file name 
 huffman::huffman(string in, string out)
 {
 	finName = in;
@@ -81,19 +82,21 @@ void huffman::createPq()
 		return;
 	}
 	fin.get(id);
+	//get character (id) by character
 	while (!fin.eof())
 	{
 		nodeArray[id]->freq++;
 		fin.get(id);
 	}
 	fin.close();
+	//priority queue: the less frequency each character the higher priority it takes in the queue
 	for (int i = 0; i < 128; i++)
 	{
 		if (nodeArray[i]->freq)
 			pq.push(nodeArray[i]);
 	}
 }
-
+//init Huffman tree by definiton
 void huffman::createHuffmanTree()
 {
 	priority_queue<huffNode, vector<huffNode>, compare> temp(pq);
@@ -110,12 +113,12 @@ void huffman::createHuffmanTree()
 		temp.push(root);
 	}
 }
-
+//get table code
 void huffman::calculateHufmanCodes()
 {
 	traverse(root, "");
 }
-
+//encoding
 void huffman::codingSave()
 {
 	fin.open(finName, ios::in);
@@ -133,6 +136,7 @@ void huffman::codingSave()
 	{
 		huffNode current = temp.top();
 		in += current->id;
+		//Replaces the current value by n consecutive copies of character c.
 		s.assign(127 - current->code.size(), '0');
 		s += '1';
 		s.append(current->code);
@@ -178,27 +182,28 @@ void huffman::recreateHuffmanTree()
 		cerr << finName << " can't open!" << endl;
 		return;
 	}
-	unsigned char size;																			
+	unsigned char size;
+	//reinterpret_cast: type_casting ( hardly error ) ( pointer to pointer)																			
 	fin.read(reinterpret_cast<char*>(&size), 1);
 	root = new huffman_node;
 	for (int i = 0; i < size; i++)
 	{
-		char a_code;
-		unsigned char h_code_c[16];																
-		fin.read(&a_code, 1);
-		fin.read(reinterpret_cast<char*>(h_code_c), 16);
-		string h_code_s = "";
+		char newCode;
+		unsigned char codeCharacter[16];																
+		fin.read(&newCode, 1);
+		fin.read(reinterpret_cast<char*>(codeCharacter), 16);
+		string codeString = "";
 		for (int i = 0; i < 16; i++)
 		{
-			h_code_s += decimalToBinary(h_code_c[i]);
+			codeString += decimalToBinary(codeCharacter[i]);
 		}
 		int j = 0;
-		while (h_code_s[j] == '0')
+		while (codeString[j] == '0')
 		{
 			j++;
 		}
-		h_code_s = h_code_s.substr(j + 1);
-		buildTree(h_code_s, a_code);
+		codeString = codeString.substr(j + 1);
+		buildTree(codeString, newCode);
 	}
 	fin.close();
 }
@@ -212,13 +217,15 @@ void huffman::decodingSave()
 		cerr << "Error!" << endl;
 		return;
 	}
-	unsigned char size;																		//get the size of huffman tree
+	unsigned char size;
+	//get the size of huffman tree																		
 	fin.read(reinterpret_cast<char*>(&size), 1);
-	fin.seekg(-1, ios::end);															//jump to the last one byte to get the number of '0' append to the string at last
-	char count0;
-	fin.read(&count0, 1);
-	fin.seekg((1 + 17 * size), ios::beg);													//jump to the position where text starts
-
+	//jump to the last one byte to get the number of '0' append to the string at last
+	fin.seekg(-1, ios::end);															
+	char countZero;
+	fin.read(&countZero, 1);
+	//jump to the position where text starts
+	fin.seekg((1 + 17 * size), ios::beg);													
 	vector<unsigned char> text;
 	unsigned char textseg;
 	fin.read(reinterpret_cast<char*>(&textseg), 1);
@@ -233,7 +240,7 @@ void huffman::decodingSave()
 	{//translate the huffman code
 		path = decimalToBinary(text[i]);
 		if (i == text.size() - 2)
-			path = path.substr(0, 8 - count0);
+			path = path.substr(0, 8 - countZero);
 		for (int j = 0; j < path.size(); j++)
 		{
 				if (path[j] == '0')

@@ -1,5 +1,5 @@
 #include "execute.h"
-
+#include "jpeg_compression.h"
 
 void execute()
 {
@@ -9,7 +9,9 @@ void execute()
 	cout << "2. Decompressing file" << endl;
 	cout <<	"3. Compressing folder"<<endl;
 	cout << "4. Decompressing folder"<<endl;
-	cout << "5. Exit" << endl;
+	cout << "5. Compress image"<<endl;
+	cout << "6. Decompress image"<<endl;
+	cout << "0. Exit" << endl;
 	cout << "------------------" << endl;
 	cout << "Which option do you want: ";
 	cin >> choice;
@@ -63,7 +65,36 @@ void execute()
 	case 4:
 		decompressFolder();
 		break;
-	default:
+	case 5:
+		string inp, out;
+		cout<<"Enter path to source file: ";
+		cin.ignore();
+		getline(cin, inp);
+		cout<<"Enter path to output file: ";
+		cin.ignore();
+		getline(cin, out);
+		int quality=-1;
+		while(quality<0 || quality>3) {
+			cout<<"Enter quality level (0-3): ";
+			cin>>quality;
+		}
+		cout<<"Compressing..."<<endl;
+		compress(input, output, quality);
+		cout<<"====================="<<endl;
+		cout << "Compressing successfully !!" << endl;
+	case 6:
+		string inp, out;
+		cout<<"Enter path to source file: ";
+		cin.ignore();
+		getline(cin, inp);
+		cout<<"Enter path to output file: ";
+		cin.ignore();
+		getline(cin, out);
+		cout<<"Decompressing..."<<endl;
+		decompress(input, output);
+		cout<<"====================="<<endl;
+		cout << "Decompressing successfully !!" << endl;
+	case 0:
 		exit(0);
 	}
 }

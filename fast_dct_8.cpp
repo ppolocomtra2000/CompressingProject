@@ -9,6 +9,9 @@
 #include "fast_dct_8.h"
 using namespace sf;
 
+// thuật toán biến đổi Discrete Cosine Transform đã được cải tiến để áp dụng lên 8 phần tử với tốc độ nhanh nhất có thể
+//
+//
 static const double S[] = {
         0.353553390593273762200422,
         0.254897789552079584470970,
@@ -120,7 +123,62 @@ void fast_dct_8::inverseTransform(double* input, double* output, unsigned int st
     output[start + step*6] = (v1 - v6) / 2;
     output[start + step*7] = (v0 - v7) / 2;
 }
+//
+//
+// kết thúc thuật toán DCT
 
+// áp dụng phép biến đổi DCT lên một block (8x8) của input
+// sau DCT, các giá trị sẽ ở kiểu double - ko phù hợp để nén
+// ta chia các giá trị này với giá trị trong bảng quantization rồi làm tròn thành số nguyên để nén
+// - input, output: gt vào và ra
+// - qtable: bảng quantization được dùng
+// - x, y: tọa độ của block đó
+void _dct_quantize(array2d<Int16> input, array2d<Int16> output, const float* qtable, unsigned int x, unsigned int y) {
+    // chép các giá trị của block qua mảng tạm
+    auto temp = new double[64];
+    for (unsigned int i = 0; i < 8; ++i)
+        for (unsigned int j = 0; j < 8; ++j)
+            temp[i+j*8] = input.try_get(i+x, j+y);
+    // thực hiện biến đổi
+    for (int i = 0; i < 8; ++i)
+        fast_dct_8::transform(temp, temp, i*8, 1);
+    for (int i = 0; i < 8; ++i)
+        fast_dct_8::transform(temp, temp, i, 8);
+    // chia giá trị kết quả cho giá trị trong bảng qtable và gán cho output
+    for (unsigned int i = 0; i < 8; ++i)
+        for (unsigned int j = 0; j < 8; ++j)
+            output.try_set(i+x, j+y, (Int16)(round(temp[i+j*8] / qtable[i+j*8])));
+}
+// thực hiện _dct_quantize cho tất cả các block trong mảng
+void _dct_quantize(array2d<Int16> input, const float* qtable) {
+    for (int i = 0; i < input.get_size_x(); i+=8)
+        for (int j = 0; j < input.get_size_y(); j+=8)
+            _dct_quantize(input, input, qtable, i,j);
+}
+
+// thực hiện phép toán đảo ngược của _dct_quantize
+void _inverse_dct_quantize(array2d<Int16> input, array2d<Int16> output, const float* qtable, unsigned int x, unsigned int y) {
+    auto temp = new double[64];
+    for (unsigned int i = 0; i < 8; ++i)
+        for (unsigned int j = 0; j < 8; ++j)
+            temp[i+j*8] = input.try_get(i+x, j+y) * qtable[i+j*8];
+    for (int i = 0; i < 8; ++i)
+        fast_dct_8::inverseTransform(temp, temp, i, 8);
+    for (int i = 0; i < 8; ++i)
+        fast_dct_8::inverseTransform(temp, temp, i*8, 1);
+    for (unsigned int i = 0; i < 8; ++i)
+        for (unsigned int j = 0; j < 8; ++j)
+            output.try_set(i+x, j+y, (Int16)round(temp[i+j*8]));
+}
+void _inverse_dct_quantize(array2d<Int16> input, const float* qtable) {
+    for (int i = 0; i < input.get_size_x(); i+=8)
+        for (int j = 0; j < input.get_size_y(); j+=8)
+            _inverse_dct_quantize(input, input, qtable, i,j);
+}
+
+// bảng quantization dùng cho các mức độ nén khác nhau
+// 40: chất lượng thấp nhất, 100: cao nhất
+// lum: dùng có kênh độ sáng và kênh alpha, chrom: dùng cho các kênh màu
 static const float quantize_table_40_lum[] = {
         20, 14, 13, 20, 30, 50, 64, 76,
         15, 15, 18, 24, 33, 73, 75, 69,
@@ -207,44 +265,7 @@ static const float quantize_table_100_lum[] = {
 static const float* qtable_lum[] = {quantize_table_40_lum, quantize_table_70_lum, quantize_table_90_lum, quantize_table_100_lum};
 static const float* qtable_chrom[] = {quantize_table_40_chrom, quantize_table_70_chrom, quantize_table_90_chrom, quantize_table_100_chrom};
 
-void _dct_quantize(array2d<Int16> input, array2d<Int16> output, const float* qtable, unsigned int x, unsigned int y) {
-    auto temp = new double[64];
-    for (unsigned int i = 0; i < 8; ++i)
-        for (unsigned int j = 0; j < 8; ++j)
-            temp[i+j*8] = input.try_get(i+x, j+y);
-    for (int i = 0; i < 8; ++i)
-        fast_dct_8::transform(temp, temp, i*8, 1);
-    for (int i = 0; i < 8; ++i)
-        fast_dct_8::transform(temp, temp, i, 8);
-    for (unsigned int i = 0; i < 8; ++i)
-        for (unsigned int j = 0; j < 8; ++j)
-            output.try_set(i+x, j+y, (Int16)(round(temp[i+j*8] / qtable[i+j*8])));
-}
-void _dct_quantize(array2d<Int16> input, const float* qtable) {
-    for (int i = 0; i < input.get_size_x(); i+=8)
-        for (int j = 0; j < input.get_size_y(); j+=8)
-            _dct_quantize(input, input, qtable, i,j);
-}
-
-void _inverse_dct_quantize(array2d<Int16> input, array2d<Int16> output, const float* qtable, unsigned int x, unsigned int y) {
-    auto temp = new double[64];
-    for (unsigned int i = 0; i < 8; ++i)
-        for (unsigned int j = 0; j < 8; ++j)
-            temp[i+j*8] = input.try_get(i+x, j+y) * qtable[i+j*8];
-    for (int i = 0; i < 8; ++i)
-        fast_dct_8::inverseTransform(temp, temp, i, 8);
-    for (int i = 0; i < 8; ++i)
-        fast_dct_8::inverseTransform(temp, temp, i*8, 1);
-    for (unsigned int i = 0; i < 8; ++i)
-        for (unsigned int j = 0; j < 8; ++j)
-            output.try_set(i+x, j+y, (Int16)round(temp[i+j*8]));
-}
-void _inverse_dct_quantize(array2d<Int16> input, const float* qtable) {
-    for (int i = 0; i < input.get_size_x(); i+=8)
-        for (int j = 0; j < input.get_size_y(); j+=8)
-            _inverse_dct_quantize(input, input, qtable, i,j);
-}
-
+// thực hiện _dct_quantize, tự chọn bảng qtable ứng với chất lượng cho trước
 void fast_dct_8::dct_quantize(array2d<Int16> ycc_a, array2d<Int16> ycc_y, array2d<Int16> ycc_cb, array2d<Int16> ycc_cr, int quality) {
     _dct_quantize(ycc_a, qtable_lum[quality]);
     _dct_quantize(ycc_y, qtable_lum[quality]);

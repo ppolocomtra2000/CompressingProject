@@ -67,7 +67,7 @@ void img2ycc(int scale, bool& skip_transparency, const Image& img, array2d<Int16
     // nếu tất cả các pixel đều opague thì không cần dùng
     skip_transparency = true;
     for (int i = 0; i < ycc_a.get_size_x()*ycc_a.get_size_y(); ++i)
-        if(ycc_a.arr[i] < 126) {
+        if(ycc_a(i) < 126) {
             skip_transparency = false;
             break;
         }
